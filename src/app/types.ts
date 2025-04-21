@@ -11,7 +11,7 @@ export interface PlacedShip extends Ship {
 export interface GameBoardProps {
   playerName: string;
   isPlacingShips: boolean;
-  onShipsPlaced: (ships: PlacedShip[]) => void;
+  playerRole: string;
 }
 
 export interface BoardCell {

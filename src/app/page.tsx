@@ -11,6 +11,7 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [playerRole, setPlayerRole] = useState<string>("");
 
   useEffect(() => {
     const onConnect = () => {
@@ -22,6 +23,7 @@ export default function Home() {
       setIsConnected(false);
       setHasSubmittedName(false);
       setGameStarted(false);
+      socket.emit("reset_game");
     };
 
     const onGameStart = () => {
@@ -36,11 +38,22 @@ export default function Home() {
       setErrorMessage(message);
     };
 
+    const onRoleAssigned = (role: string) => {
+      setPlayerRole(role);
+    };
+
+    const onBothMapsSet = () => {
+      console.log("Both maps have been set.");
+    };
+
+    // Add the event listener
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("game_start", onGameStart);
     socket.on("player_count", onPlayerCountUpdate);
     socket.on("game_error", onGameError);
+    socket.on("assigned_role", onRoleAssigned);
+    socket.on("both_maps_set", onBothMapsSet);
 
     if (socket.connected) onConnect();
 
@@ -50,6 +63,8 @@ export default function Home() {
       socket.off("game_start", onGameStart);
       socket.off("player_count", onPlayerCountUpdate);
       socket.off("game_error", onGameError);
+      socket.off("assigned_role", onRoleAssigned);
+
       socket.disconnect();
     };
   }, []);
@@ -106,7 +121,7 @@ export default function Home() {
             <GameBoard
               playerName={playerName}
               isPlacingShips={true}
-              onShipsPlaced={() => {}}
+              playerRole={playerRole}
             />
           </div>
         )}

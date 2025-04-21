@@ -12,6 +12,7 @@ const handler = app.getRequestHandler();
 const MAX_PLAYERS = 2;
 const players = new Map();
 let player1Map, player2Map;
+let assignedRoles = { player1: false, player2: false };
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
@@ -36,6 +37,19 @@ app.prepare().then(() => {
         player.name = name;
         console.log(`Player named: ${name}`);
 
+        // Assign roles based on availability, prioritizing player1
+        if (!assignedRoles.player1) {
+          player.role = "player1";
+          assignedRoles.player1 = true;
+          console.log(`Assigned role: player1 to ${name}`);
+          socket.emit("assigned_role", "player1");
+        } else if (!assignedRoles.player2) {
+          player.role = "player2";
+          assignedRoles.player2 = true;
+          console.log(`Assigned role: player2 to ${name}`);
+          socket.emit("assigned_role", "player2");
+        }
+
         const allReady = Array.from(players.values()).every((p) => p.name);
         if (players.size === MAX_PLAYERS && allReady) {
           io.emit("game_start");
@@ -44,51 +58,60 @@ app.prepare().then(() => {
     });
 
     socket.on("disconnect", () => {
+      const player = players.get(socket.id);
+      if (player && player.role) {
+        assignedRoles[player.role] = false;
+      }
       players.delete(socket.id);
       io.emit("player_count", players.size);
       console.log("Client disconnected", socket.id);
     });
-  });
 
-  socket.on("finished_placing", (playerId, map) => {
-    if (playerId === "player1") {
-      player1Map = map;
-      io.emit("player1_map_set", player1Map);
-    } else if (playerId === "player2") {
-      player2Map = map;
-      io.emit("player2_map_set", player2Map);
-    }
+    socket.on("finished_placing", (data) => {
+      const player = players.get(socket.id);
+      if (player) {
+        const playerRole = player.role; // player1 or player2
+        if (playerRole === "player1") {
+          player1Map = data;
+          io.emit("player1_map_set", player1Map);
+        } else if (playerRole === "player2") {
+          player2Map = data;
+          io.emit("player2_map_set", player2Map);
+        }
 
-    if (player1Map && player2Map) {
-      io.emit("both_maps_set", { player1Map, player2Map });
-    }
-  });
+        if (player1Map && player2Map) {
+          io.emit("both_maps_set", { player1Map, player2Map });
+        }
+      }
+    });
 
-  socket.on("attack", (attackerId, targetId, coordinates) => {
-    const attacker = players.get(attackerId);
-    const target = players.get(targetId);
+    socket.on("attack", (attackerId, targetId, coordinates) => {
+      const attacker = players.get(attackerId);
+      const target = players.get(targetId);
 
-    if (attacker && target) {
-      io.emit("attack_result", {
-        attacker: attacker.name,
-        target: target.name,
-        coordinates,
-      });
-    }
-  });
+      if (attacker && target) {
+        io.emit("attack_result", {
+          attacker: attacker.name,
+          target: target.name,
+          coordinates,
+        });
+      }
+    });
 
-  socket.on("game_over", (winnerId) => {
-    const winner = players.get(winnerId);
-    if (winner) {
-      io.emit("game_over", { winner: winner.name });
-    }
-  });
+    socket.on("game_over", (winnerId) => {
+      const winner = players.get(winnerId);
+      if (winner) {
+        io.emit("game_over", { winner: winner.name });
+      }
+    });
 
-  socket.on("reset_game", () => {
-    players.clear();
-    player1Map = null;
-    player2Map = null;
-    io.emit("game_reset");
+    socket.on("reset_game", () => {
+      players.clear();
+      player1Map = null;
+      player2Map = null;
+      assignedRoles = { player1: false, player2: false };
+      io.emit("game_reset");
+    });
   });
 
   httpServer.listen(port, () => {
