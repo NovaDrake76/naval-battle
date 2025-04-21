@@ -28,11 +28,11 @@ export default function Home() {
       setGameStarted(true);
     };
 
-    const onPlayerCountUpdate = (count) => {
+    const onPlayerCountUpdate = (count: number) => {
       setPlayerCount(count);
     };
 
-    const onGameError = (message) => {
+    const onGameError = (message: string) => {
       setErrorMessage(message);
     };
 
@@ -54,7 +54,7 @@ export default function Home() {
     };
   }, []);
 
-  const handleNameSubmit = (e) => {
+  const handleNameSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (playerName.trim()) {
       socket.emit("set_name", playerName);
@@ -63,44 +63,54 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-6">Naval Battle</h1>
+    <main className="min-h-screen p-8 flex">
+      <div className="w-1/6 br">
+        <h1 className="text-3xl font-bold mb-6">Naval Battle</h1>
 
-      {errorMessage && (
-        <div className="bg-red-100 border text-red-700 px-4 py-3 rounded mb-4">
-          {errorMessage}
-        </div>
-      )}
+        {errorMessage && (
+          <div className="bg-red-100 border text-red-700 px-4 py-3 rounded mb-4">
+            {errorMessage}
+          </div>
+        )}
 
-      <p>Connection: {isConnected ? "Connected" : "Disconnected"}</p>
-      <p>Players online: {playerCount}/2</p>
+        <p>Connection: {isConnected ? "Connected" : "Disconnected"}</p>
+        <p>Players online: {playerCount}/2</p>
 
-      {!hasSubmittedName && isConnected && (
-        <form onSubmit={handleNameSubmit} className="flex gap-2 mt-4">
-          <input
-            type="text"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Enter your name"
-            className="px-4 py-2 border rounded"
-            required
-          />
-          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-            Join Game
-          </button>
-        </form>
-      )}
-      {gameStarted ? "Game Started!" : "Waiting for players..."}
+        {!hasSubmittedName && isConnected && (
+          <form
+            onSubmit={handleNameSubmit}
+            className=" gap-2 mt-4 flex flex-col"
+          >
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Enter your name"
+              className="px-4 py-2 border rounded"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+              onClick={handleNameSubmit}
+            >
+              Join Game
+            </button>
+          </form>
+        )}
+        {gameStarted ? "Game Started!" : "Waiting for players..."}
+      </div>
 
-      {gameStarted && hasSubmittedName && (
-        <div className="mt-6">
-          <GameBoard
-            playerName={playerName}
-            isPlacingShips={true}
-            onShipsPlaced={() => {}}
-          />
-        </div>
-      )}
+      <div className="w-5/6 flex justify-center items-center">
+        {gameStarted && hasSubmittedName && (
+          <div className="mt-6">
+            <GameBoard
+              playerName={playerName}
+              isPlacingShips={true}
+              onShipsPlaced={() => {}}
+            />
+          </div>
+        )}
+      </div>
     </main>
   );
 }

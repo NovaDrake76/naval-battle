@@ -1,25 +1,9 @@
+"use client";
+
 import React, { useState } from "react";
-
-interface Ship {
-  name: string;
-  size: number;
-  color: string;
-}
-
-interface PlacedShip extends Ship {
-  positions: { row: number; col: number }[];
-}
-
-interface GameBoardProps {
-  playerName: string;
-  isPlacingShips: boolean;
-  onShipsPlaced: (ships: PlacedShip[]) => void;
-}
-
-interface BoardCell {
-  ship: string;
-  color: string;
-}
+import { SHIP_TYPES } from "../utils";
+import { BoardCell, GameBoardProps, PlacedShip, Ship } from "../types";
+import Buttons from "./PlacingShips/Buttons";
 
 const GameBoard: React.FC<GameBoardProps> = ({
   playerName,
@@ -27,13 +11,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onShipsPlaced,
 }) => {
   const BOARD_SIZE = 10;
-  const SHIP_TYPES: Ship[] = [
-    { name: "Carrier", size: 5, color: "bg-blue-500" },
-    { name: "Battleship", size: 4, color: "bg-green-500" },
-    { name: "Cruiser", size: 3, color: "bg-yellow-500" },
-    { name: "Submarine", size: 3, color: "bg-orange-500" },
-    { name: "Destroyer", size: 2, color: "bg-red-500" },
-  ];
 
   const [board, setBoard] = useState<(BoardCell | null)[][]>(
     Array(BOARD_SIZE)
@@ -46,24 +23,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
   >("horizontal");
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
 
-  // Handle orientation toggle
-  const toggleOrientation = () => {
-    setShipOrientation(
-      shipOrientation === "horizontal" ? "vertical" : "horizontal"
-    );
-  };
-
-  // Check if a ship can be placed at the given position
+  //check if its valid position
   const canPlaceShip = (row: number, col: number, ship: Ship | null) => {
     if (!ship) return false;
 
-    // Check if the ship would go out of bounds
+    //check out of bounds
     if (shipOrientation === "horizontal" && col + ship.size > BOARD_SIZE)
       return false;
     if (shipOrientation === "vertical" && row + ship.size > BOARD_SIZE)
       return false;
 
-    // Check if the ship would overlap with another ship
+    //check overlapping
     for (let i = 0; i < ship.size; i++) {
       const checkRow = shipOrientation === "vertical" ? row + i : row;
       const checkCol = shipOrientation === "horizontal" ? col + i : col;
@@ -73,29 +43,27 @@ const GameBoard: React.FC<GameBoardProps> = ({
     return true;
   };
 
-  // Place a ship on the board
   const placeShip = (row: number, col: number) => {
     if (!selectedShip || !canPlaceShip(row, col, selectedShip)) return;
 
     const newBoard = [...board.map((row) => [...row])];
     const newPlacedShips = [...placedShips];
 
-    // Check if this ship type is already placed
+    //check if this ship type is already placed
     const alreadyPlacedIndex = newPlacedShips.findIndex(
       (ship) => ship.name === selectedShip.name
     );
     if (alreadyPlacedIndex !== -1) {
-      // Remove the old ship from the board
+      //remove the old ship from the board
       const oldShip = newPlacedShips[alreadyPlacedIndex];
       oldShip.positions.forEach((pos) => {
         newBoard[pos.row][pos.col] = null;
       });
 
-      // Remove the ship from the placed ships array
       newPlacedShips.splice(alreadyPlacedIndex, 1);
     }
 
-    // Add the new ship
+    //add the new ship
     for (let i = 0; i < selectedShip.size; i++) {
       const updateRow = shipOrientation === "vertical" ? row + i : row;
       const updateCol = shipOrientation === "horizontal" ? col + i : col;
@@ -118,11 +86,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setBoard(newBoard);
     setPlacedShips(newPlacedShips);
 
-    // Remove the ship from selection after placing
+    //remove the ship from selection after placing
     setSelectedShip(null);
   };
 
-  // Reset the board and all placed ships
   const resetBoard = () => {
     setBoard(
       Array(BOARD_SIZE)
@@ -133,72 +100,31 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setSelectedShip(null);
   };
 
-  // Confirm ships placement
   const confirmPlacement = () => {
     if (placedShips.length === SHIP_TYPES.length) {
       onShipsPlaced(placedShips);
     }
   };
 
-  // Remaining ships to place
   const remainingShips = SHIP_TYPES.filter(
     (ship) => !placedShips.find((placed) => placed.name === ship.name)
   );
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">{playerName}'s Board</h2>
+    <div className="p-4 min-w-[800px]">
+      <h2 className="text-xl font-bold mb-4">{playerName}&apos;s Board</h2>
 
-      {isPlacingShips && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-4 mb-4">
-            {remainingShips.map((ship) => (
-              <button
-                key={ship.name}
-                className={`px-4 py-2 rounded text-black ${
-                  selectedShip?.name === ship.name
-                    ? "ring-2 ring-blue-600 text-white"
-                    : "bg-gray-200"
-                }`}
-                onClick={() => setSelectedShip(ship)}
-              >
-                {ship.name} ({ship.size})
-              </button>
-            ))}
-          </div>
-
-          <div className="mb-4">
-            <button
-              className="px-4 py-2 bg-gray-200 rounded mr-4 text-black"
-              onClick={toggleOrientation}
-            >
-              Orientation: {shipOrientation}
-            </button>
-
-            <button
-              className="px-4 py-2 bg-red-100 rounded text-black"
-              onClick={resetBoard}
-            >
-              Reset Board
-            </button>
-          </div>
-
-          {selectedShip && (
-            <p className="mb-4">
-              Placing: {selectedShip.name} ({selectedShip.size} spaces)
-            </p>
-          )}
-
-          {placedShips.length === SHIP_TYPES.length && (
-            <button
-              className="px-4 py-2 bg-green-500 text-white rounded"
-              onClick={confirmPlacement}
-            >
-              Confirm Placement
-            </button>
-          )}
-        </div>
-      )}
+      <Buttons
+        isPlacingShips={isPlacingShips}
+        remainingShips={remainingShips}
+        placedShips={placedShips}
+        selectedShip={selectedShip}
+        setSelectedShip={setSelectedShip}
+        shipOrientation={shipOrientation}
+        setShipOrientation={setShipOrientation}
+        resetBoard={resetBoard}
+        confirmPlacement={confirmPlacement}
+      />
 
       <div className="inline-block border-2 border-gray-400 bg-blue-100">
         <div className="flex">
