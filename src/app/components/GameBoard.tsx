@@ -22,6 +22,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
     "horizontal" | "vertical"
   >("horizontal");
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
+  // Add state for preview
+  const [previewPosition, setPreviewPosition] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   //check if its valid position
   const canPlaceShip = (row: number, col: number, ship: Ship | null) => {
@@ -33,14 +38,92 @@ const GameBoard: React.FC<GameBoardProps> = ({
     if (shipOrientation === "vertical" && row + ship.size > BOARD_SIZE)
       return false;
 
-    //check overlapping
+    // Check if ship would overlap with another ship or touch another ship (even diagonally)
     for (let i = 0; i < ship.size; i++) {
-      const checkRow = shipOrientation === "vertical" ? row + i : row;
-      const checkCol = shipOrientation === "horizontal" ? col + i : col;
-      if (board[checkRow][checkCol] !== null) return false;
+      const shipRow = shipOrientation === "vertical" ? row + i : row;
+      const shipCol = shipOrientation === "horizontal" ? col + i : col;
+
+      // Check if current cell already has a ship
+      if (board[shipRow][shipCol] !== null) return false;
+
+      // Check all adjacent cells (including diagonals)
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          // Skip checking the current cell
+          if (dr === 0 && dc === 0) continue;
+
+          const adjacentRow = shipRow + dr;
+          const adjacentCol = shipCol + dc;
+
+          // Skip if adjacent cell is out of bounds
+          if (
+            adjacentRow < 0 ||
+            adjacentRow >= BOARD_SIZE ||
+            adjacentCol < 0 ||
+            adjacentCol >= BOARD_SIZE
+          )
+            continue;
+
+          // If there's a ship in an adjacent cell, placement is invalid
+          if (board[adjacentRow][adjacentCol] !== null) {
+            // Exception: if it's part of the same ship we're currently placing (for previewing)
+            let isPartOfCurrentShip = false;
+            if (selectedShip) {
+              for (let j = 0; j < ship.size; j++) {
+                const currentShipRow =
+                  shipOrientation === "vertical" ? row + j : row;
+                const currentShipCol =
+                  shipOrientation === "horizontal" ? col + j : col;
+                if (
+                  adjacentRow === currentShipRow &&
+                  adjacentCol === currentShipCol
+                ) {
+                  isPartOfCurrentShip = true;
+                  break;
+                }
+              }
+            }
+
+            if (!isPartOfCurrentShip) return false;
+          }
+        }
+      }
     }
 
     return true;
+  };
+
+  // Check if cell is part of the preview
+  const isPreviewCell = (row: number, col: number) => {
+    if (!selectedShip || !previewPosition) return false;
+
+    const previewRow = previewPosition.row;
+    const previewCol = previewPosition.col;
+
+    for (let i = 0; i < selectedShip.size; i++) {
+      const checkRow =
+        shipOrientation === "vertical" ? previewRow + i : previewRow;
+      const checkCol =
+        shipOrientation === "horizontal" ? previewCol + i : previewCol;
+
+      if (row === checkRow && col === checkCol) return true;
+    }
+
+    return false;
+  };
+
+  // Get preview color (lighter version of the ship color)
+  const getPreviewColor = (color: string) => {
+    // Map of colors to their preview versions
+    const colorMap: { [key: string]: string } = {
+      "bg-blue-500": "bg-blue-200",
+      "bg-green-500": "bg-green-200",
+      "bg-yellow-500": "bg-yellow-200",
+      "bg-orange-500": "bg-orange-200",
+      "bg-red-500": "bg-red-200",
+    };
+
+    return colorMap[color] || "bg-gray-200";
   };
 
   const placeShip = (row: number, col: number) => {
@@ -85,9 +168,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     setBoard(newBoard);
     setPlacedShips(newPlacedShips);
-
-    //remove the ship from selection after placing
     setSelectedShip(null);
+    setPreviewPosition(null);
   };
 
   const resetBoard = () => {
@@ -98,12 +180,25 @@ const GameBoard: React.FC<GameBoardProps> = ({
     );
     setPlacedShips([]);
     setSelectedShip(null);
+    setPreviewPosition(null);
   };
 
   const confirmPlacement = () => {
     if (placedShips.length === SHIP_TYPES.length) {
       onShipsPlaced(placedShips);
     }
+  };
+
+  // Handle mouse enter for preview
+  const handleMouseEnter = (row: number, col: number) => {
+    if (isPlacingShips && selectedShip) {
+      setPreviewPosition({ row, col });
+    }
+  };
+
+  // Handle mouse leave for preview
+  const handleMouseLeave = () => {
+    setPreviewPosition(null);
   };
 
   const remainingShips = SHIP_TYPES.filter(
@@ -147,22 +242,48 @@ const GameBoard: React.FC<GameBoardProps> = ({
               {rowIndex + 1}
             </div>
 
-            {row.map((cell, colIndex) => (
-              <div
-                key={colIndex}
-                className={`w-8 h-8 border border-gray-400  ${
-                  cell ? cell.color : "bg-white"
-                } 
-                  ${
-                    isPlacingShips &&
-                    selectedShip &&
-                    canPlaceShip(rowIndex, colIndex, selectedShip)
-                      ? "cursor-pointer hover:bg-gray-200"
-                      : ""
-                  }`}
-                onClick={() => isPlacingShips && placeShip(rowIndex, colIndex)}
-              />
-            ))}
+            {row.map((cell, colIndex) => {
+              // Determine cell styling including preview
+              let cellClasses = "w-8 h-8 border border-gray-400 ";
+
+              // Check if this is a preview cell
+              if (
+                isPlacingShips &&
+                selectedShip &&
+                isPreviewCell(rowIndex, colIndex) &&
+                canPlaceShip(
+                  previewPosition?.row || 0,
+                  previewPosition?.col || 0,
+                  selectedShip
+                )
+              ) {
+                cellClasses += getPreviewColor(selectedShip.color);
+              } else if (cell) {
+                cellClasses += cell.color;
+              } else {
+                cellClasses += "bg-white";
+              }
+
+              if (
+                isPlacingShips &&
+                selectedShip &&
+                canPlaceShip(rowIndex, colIndex, selectedShip)
+              ) {
+                cellClasses += " cursor-pointer";
+              }
+
+              return (
+                <div
+                  key={colIndex}
+                  className={cellClasses}
+                  onClick={() =>
+                    isPlacingShips && placeShip(rowIndex, colIndex)
+                  }
+                  onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
+                  onMouseLeave={handleMouseLeave}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
