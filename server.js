@@ -11,6 +11,7 @@ const handler = app.getRequestHandler();
 
 const MAX_PLAYERS = 2;
 const players = new Map();
+let player1Map, player2Map;
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
@@ -47,6 +48,47 @@ app.prepare().then(() => {
       io.emit("player_count", players.size);
       console.log("Client disconnected", socket.id);
     });
+  });
+
+  socket.on("finished_placing", (playerId, map) => {
+    if (playerId === "player1") {
+      player1Map = map;
+      io.emit("player1_map_set", player1Map);
+    } else if (playerId === "player2") {
+      player2Map = map;
+      io.emit("player2_map_set", player2Map);
+    }
+
+    if (player1Map && player2Map) {
+      io.emit("both_maps_set", { player1Map, player2Map });
+    }
+  });
+
+  socket.on("attack", (attackerId, targetId, coordinates) => {
+    const attacker = players.get(attackerId);
+    const target = players.get(targetId);
+
+    if (attacker && target) {
+      io.emit("attack_result", {
+        attacker: attacker.name,
+        target: target.name,
+        coordinates,
+      });
+    }
+  });
+
+  socket.on("game_over", (winnerId) => {
+    const winner = players.get(winnerId);
+    if (winner) {
+      io.emit("game_over", { winner: winner.name });
+    }
+  });
+
+  socket.on("reset_game", () => {
+    players.clear();
+    player1Map = null;
+    player2Map = null;
+    io.emit("game_reset");
   });
 
   httpServer.listen(port, () => {
