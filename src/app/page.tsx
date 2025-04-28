@@ -12,6 +12,9 @@ export default function Home() {
   const [playerCount, setPlayerCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [playerRole, setPlayerRole] = useState<string>("");
+  const [gamePhase, setGamePhase] = useState<"placing" | "attacking">(
+    "placing"
+  );
 
   useEffect(() => {
     const onConnect = () => {
@@ -36,6 +39,11 @@ export default function Home() {
 
     const onGameError = (message: string) => {
       setErrorMessage(message);
+
+      //clear error after 5 seconds
+      setTimeout(() => {
+        setErrorMessage("");
+      }, 5000);
     };
 
     const onRoleAssigned = (role: string) => {
@@ -44,9 +52,21 @@ export default function Home() {
 
     const onBothMapsSet = () => {
       console.log("Both maps have been set.");
+      setGamePhase("attacking");
     };
 
-    // Add the event listener
+    const onGamePhaseUpdate = (phase: "placing" | "attacking") => {
+      setGamePhase(phase);
+    };
+
+    const onGameReset = () => {
+      setGameStarted(false);
+      setHasSubmittedName(false);
+      setGamePhase("placing");
+      setPlayerRole("");
+    };
+
+    // Add the event listeners
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("game_start", onGameStart);
@@ -54,6 +74,8 @@ export default function Home() {
     socket.on("game_error", onGameError);
     socket.on("assigned_role", onRoleAssigned);
     socket.on("both_maps_set", onBothMapsSet);
+    socket.on("game_phase_update", onGamePhaseUpdate);
+    socket.on("game_reset", onGameReset);
 
     if (socket.connected) onConnect();
 
@@ -64,6 +86,9 @@ export default function Home() {
       socket.off("player_count", onPlayerCountUpdate);
       socket.off("game_error", onGameError);
       socket.off("assigned_role", onRoleAssigned);
+      socket.off("both_maps_set", onBothMapsSet);
+      socket.off("game_phase_update", onGamePhaseUpdate);
+      socket.off("game_reset", onGameReset);
 
       socket.disconnect();
     };
@@ -88,13 +113,20 @@ export default function Home() {
           </div>
         )}
 
-        <p>Connection: {isConnected ? "Connected" : "Disconnected"}</p>
-        <p>Players online: {playerCount}/2</p>
+        <div className="mb-4">
+          <p>Connection: {isConnected ? "Connected" : "Disconnected"}</p>
+          <p>Players online: {playerCount}/2</p>
+          <p>
+            Game Phase:{" "}
+            {gamePhase === "placing" ? "Placing Ships" : "Attack Phase"}
+          </p>
+          {playerRole && <p>Your Role: {playerRole}</p>}
+        </div>
 
         {!hasSubmittedName && isConnected && (
           <form
             onSubmit={handleNameSubmit}
-            className=" gap-2 mt-4 flex flex-col"
+            className="gap-2 mt-4 flex flex-col"
           >
             <input
               type="text"
@@ -112,7 +144,12 @@ export default function Home() {
             </button>
           </form>
         )}
-        {gameStarted ? "Game Started!" : "Waiting for players..."}
+
+        {!gameStarted && hasSubmittedName && (
+          <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded">
+            Waiting for another player to join...
+          </div>
+        )}
       </div>
 
       <div className="w-5/6 flex justify-center items-center">
@@ -120,7 +157,7 @@ export default function Home() {
           <div className="mt-6">
             <GameBoard
               playerName={playerName}
-              isPlacingShips={true}
+              isPlacingShips={gamePhase === "placing"}
               playerRole={playerRole}
             />
           </div>
