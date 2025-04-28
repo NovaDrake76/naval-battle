@@ -94,6 +94,60 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setPreviewPosition(null);
   };
 
+  const randomPlacement = () => {
+    // Clear the board first
+    const newBoard = createEmptyBoard();
+    const newPlacedShips: PlacedShip[] = [];
+
+    // Try placing each ship
+    for (const shipType of SHIP_TYPES) {
+      let placed = false;
+      let attempts = 0;
+      const maxAttempts = 100; // Prevent infinite loops
+
+      while (!placed && attempts < maxAttempts) {
+        // Randomly choose orientation
+        const randOrientation = Math.random() < 0.5 ? "horizontal" : "vertical";
+
+        // Get random position
+        const row = Math.floor(Math.random() * BOARD_SIZE);
+        const col = Math.floor(Math.random() * BOARD_SIZE);
+
+        // Try to place the ship
+        if (
+          canPlaceShip(row, col, shipType, newBoard, randOrientation, shipType)
+        ) {
+          const result = placeShip(
+            row,
+            col,
+            shipType,
+            newBoard,
+            newPlacedShips,
+            randOrientation
+          );
+
+          Object.assign(newBoard, result.board);
+          newPlacedShips.push(
+            ...result.placedShips.filter(
+              (ship) =>
+                ship.name === shipType.name &&
+                !newPlacedShips.some((existing) => existing.name === ship.name)
+            )
+          );
+          placed = true;
+        }
+
+        attempts++;
+      }
+    }
+
+    // Update states
+    setBoard(newBoard);
+    setPlacedShips(newPlacedShips);
+    setSelectedShip(null);
+    setPreviewPosition(null);
+  };
+
   const remainingShips = SHIP_TYPES.filter(
     (ship) => !placedShips.find((placed) => placed.name === ship.name)
   );
@@ -113,7 +167,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
         resetBoard={resetBoard}
         confirmPlacement={confirmPlacement}
       />
-
+      {isPlacingShips && (
+        <button
+          onClick={randomPlacement}
+          className="ml-2 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+        >
+          Random Placement
+        </button>
+      )}
       <div className="inline-block border-2 border-gray-400 bg-blue-100">
         <div className="flex">
           <div className="w-8 h-8"></div>

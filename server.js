@@ -81,6 +81,7 @@ app.prepare().then(() => {
 
         if (player1Map && player2Map) {
           io.emit("both_maps_set", { player1Map, player2Map });
+          console.log(JSON.stringify(player1Map.ships[0].positions));
         }
       }
     });
