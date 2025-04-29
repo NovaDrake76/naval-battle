@@ -32,7 +32,7 @@ const GameStatus: React.FC<GameStatusProps> = ({
   if (hitStreak < 0) hitStreak = 0;
 
   return (
-    <div className="p-4 bg-gray-100 rounded-lg border border-gray-300 mb-4">
+    <div className="p-4 bg-gray-100 rounded-lg border border-gray-300 mb-4 text-black">
       <h3 className="text-lg font-bold mb-2">Game Status</h3>
 
       <div className="mb-4">
@@ -95,13 +95,6 @@ const GameStatus: React.FC<GameStatusProps> = ({
           <li>Ships Destroyed: {enemyShipsDestroyed.length}</li>
           <li>Total Hits: {totalHits}</li>
         </ul>
-      </div>
-
-      <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded text-sm">
-        <p>
-          <strong>Game Rule:</strong> When you hit a ship, you get to attack
-          again. Your turn continues until you miss.
-        </p>
       </div>
     </div>
   );

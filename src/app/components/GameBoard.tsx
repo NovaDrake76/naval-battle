@@ -334,104 +334,104 @@ const GameBoard: React.FC<GameBoardProps> = ({
     return (
       <div className="p-4 min-w-[800px]">
         <h2 className="text-xl font-bold mb-4">{playerName}&apos;s Board</h2>
-
-        <Buttons
-          isPlacingShips={true}
-          remainingShips={remainingShips}
-          placedShips={placedShips}
-          selectedShip={selectedShip}
-          setSelectedShip={setSelectedShip}
-          shipOrientation={shipOrientation}
-          setShipOrientation={setShipOrientation}
-          resetBoard={resetBoard}
-          confirmPlacement={confirmPlacement}
-        />
-
-        <button
-          onClick={randomPlacement}
-          className="ml-2 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-        >
-          Random Placement
-        </button>
-
-        <div className="inline-block border-2 border-gray-400 bg-blue-100">
-          <div className="flex">
-            <div className="w-8 h-8"></div>
-            {Array(BOARD_SIZE)
-              .fill(null)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 flex items-center justify-center font-bold text-black"
-                >
-                  {String.fromCharCode(65 + i)}
-                </div>
-              ))}
-          </div>
-
-          {board.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex">
-              <div className="w-8 h-8 flex items-center justify-center font-bold text-black">
-                {rowIndex + 1}
-              </div>
-
-              {row.map((cell, colIndex) => {
-                let cellClasses = "w-8 h-8 border border-gray-400 ";
-
-                if (
-                  selectedShip &&
-                  isPreviewCell(
-                    rowIndex,
-                    colIndex,
-                    selectedShip,
-                    previewPosition,
-                    shipOrientation
-                  ) &&
-                  canPlaceShip(
-                    previewPosition?.row || 0,
-                    previewPosition?.col || 0,
-                    selectedShip,
-                    board,
-                    shipOrientation,
-                    selectedShip
-                  )
-                ) {
-                  cellClasses += getPreviewColor(selectedShip.color);
-                } else if (cell) {
-                  cellClasses += cell.color;
-                } else {
-                  cellClasses += "bg-white";
-                }
-
-                if (
-                  selectedShip &&
-                  canPlaceShip(
-                    rowIndex,
-                    colIndex,
-                    selectedShip,
-                    board,
-                    shipOrientation,
-                    selectedShip
-                  )
-                ) {
-                  cellClasses += " cursor-pointer";
-                }
-
-                return (
-                  <div
-                    key={colIndex}
-                    className={cellClasses}
-                    onClick={() => handlePlaceShip(rowIndex, colIndex)}
-                    onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                    onMouseLeave={handleMouseLeave}
-                  />
-                );
-              })}
-            </div>
-          ))}
+        <div className="flex items-center">
+          <Buttons
+            isPlacingShips={true}
+            remainingShips={remainingShips}
+            placedShips={placedShips}
+            selectedShip={selectedShip}
+            setSelectedShip={setSelectedShip}
+            shipOrientation={shipOrientation}
+            setShipOrientation={setShipOrientation}
+            resetBoard={resetBoard}
+            confirmPlacement={confirmPlacement}
+          />
         </div>
+        <div className="flex w-full items-center justify-center">
+          <div className="inline-block border-2 border-gray-400 bg-blue-100 ">
+            <div className="flex">
+              <div className="w-8 h-8"></div>
+              {Array(BOARD_SIZE)
+                .fill(null)
+                .map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 flex items-center justify-center font-bold text-black"
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </div>
+                ))}
+            </div>
 
-        <div className="mt-4">
+            {board.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex">
+                <div className="w-8 h-8 flex items-center justify-center font-bold text-black">
+                  {rowIndex + 1}
+                </div>
+
+                {row.map((cell, colIndex) => {
+                  let cellClasses = "w-8 h-8 border border-gray-400 ";
+
+                  if (
+                    selectedShip &&
+                    isPreviewCell(
+                      rowIndex,
+                      colIndex,
+                      selectedShip,
+                      previewPosition,
+                      shipOrientation
+                    ) &&
+                    canPlaceShip(
+                      previewPosition?.row || 0,
+                      previewPosition?.col || 0,
+                      selectedShip,
+                      board,
+                      shipOrientation,
+                      selectedShip
+                    )
+                  ) {
+                    cellClasses += getPreviewColor(selectedShip.color);
+                  } else if (cell) {
+                    cellClasses += cell.color;
+                  } else {
+                    cellClasses += "bg-white";
+                  }
+
+                  if (
+                    selectedShip &&
+                    canPlaceShip(
+                      rowIndex,
+                      colIndex,
+                      selectedShip,
+                      board,
+                      shipOrientation,
+                      selectedShip
+                    )
+                  ) {
+                    cellClasses += " cursor-pointer";
+                  }
+
+                  return (
+                    <div
+                      key={colIndex}
+                      className={cellClasses}
+                      onClick={() => handlePlaceShip(rowIndex, colIndex)}
+                      onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
+                      onMouseLeave={handleMouseLeave}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            onClick={randomPlacement}
+            className=" px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors cursor-pointer"
+          >
+            Random Placement
+          </button>
           <p>
             Ships placed: {placedShips.length}/{SHIP_TYPES.length}
           </p>
@@ -452,7 +452,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         )}
 
         {winner ? (
-          <div className="p-4 bg-yellow-100 border border-yellow-400 rounded mb-4">
+          <div className="p-4 bg-yellow-100 border border-yellow-400 rounded mb-4 text-black">
             <h3 className="text-lg font-bold">Game Over!</h3>
             <p>Winner: {winner}</p>
             <button

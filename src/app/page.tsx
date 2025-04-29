@@ -103,8 +103,8 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-8 flex">
-      <div className="w-1/6 br">
+    <main className="min-h-screen p-8 flex flex-col items-center justify-center">
+      <div className="w-1/6 br ">
         <h1 className="text-3xl font-bold mb-6">Naval Battle</h1>
 
         {errorMessage && (
@@ -114,12 +114,8 @@ export default function Home() {
         )}
 
         <div className="mb-4">
-          <p>Connection: {isConnected ? "Connected" : "Disconnected"}</p>
           <p>Players online: {playerCount}/2</p>
-          <p>
-            Game Phase:{" "}
-            {gamePhase === "placing" ? "Placing Ships" : "Attack Phase"}
-          </p>
+
           {playerRole && <p>Your Role: {playerRole}</p>}
         </div>
 
@@ -146,7 +142,7 @@ export default function Home() {
         )}
 
         {!gameStarted && hasSubmittedName && (
-          <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded">
+          <div className="mt-4 p-4 text-black bg-yellow-100 border border-yellow-300 rounded">
             Waiting for another player to join...
           </div>
         )}

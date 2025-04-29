@@ -34,7 +34,7 @@ function checkForHit(targetMap, coordinates) {
           (p) => !(p.row === coordinates.row && p.col === coordinates.col)
         );
 
-        //update the ship's positions
+        //update the ship's positions, removing the hit position
         ship.positions = remainingPositions;
 
         //if no positions left, ship is destroyed
