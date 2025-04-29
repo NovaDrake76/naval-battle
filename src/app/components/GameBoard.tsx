@@ -18,12 +18,15 @@ import { socket } from "../../socket";
 
 const GameBoard: React.FC<GameBoardProps> = ({
   playerName,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isPlacingShips,
   playerRole,
 }) => {
   const [board, setBoard] = useState<(BoardCell | null)[][]>(
     createEmptyBoard()
   );
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [enemyBoard, setEnemyBoard] = useState<(BoardCell | null)[][]>(
     createEmptyBoard()
   );
@@ -80,6 +83,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     socket.on("attack_result", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { attacker, target, coordinates, hit, shipDestroyed, shipName } =
         data;
 
@@ -187,6 +191,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       socket.off("game_over");
       socket.off("both_maps_set");
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerRole, attackMarkers, enemyAttackMarkers]);
 
   const resetBoard = () => {
@@ -598,7 +603,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   {Object.values(attackMarkers).filter((mark) => mark === "hit")
                     .length > 0 && (
                     <p className="text-green-600 font-medium mt-1">
-                      You're on a streak! Keep hitting to continue your turn.
+                      You&apos;re on a streak! Keep hitting to continue your
+                      turn.
                     </p>
                   )}
                 </div>
