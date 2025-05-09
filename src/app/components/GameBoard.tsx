@@ -59,6 +59,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
     message: string;
     type: "info" | "success" | "error" | "warning";
   } | null>(null);
+  // Add a new state to track if the player has confirmed their ship placement
+  const [placementConfirmed, setPlacementConfirmed] = useState<boolean>(false);
+  // Add a state to track if the player is waiting for the opponent
+  const [waitingForOpponent, setWaitingForOpponent] = useState<boolean>(false);
 
   useEffect(() => {
     //listen for updates
@@ -169,6 +173,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     socket.on("both_maps_set", () => {
       setGamePhase("attacking");
+      setWaitingForOpponent(false);
       if (playerRole === "player1") {
         setCurrentTurn("player1");
         setNotification({
@@ -184,24 +189,81 @@ const GameBoard: React.FC<GameBoardProps> = ({
       }
     });
 
+    // Add listeners for the new events
+    socket.on("placement_confirmed", (role) => {
+      if (role === playerRole) {
+        setPlacementConfirmed(true);
+        setNotification({
+          message:
+            "Ship placement confirmed! Waiting for opponent to place ships.",
+          type: "success",
+        });
+      }
+    });
+
+    socket.on("waiting_for_opponent", () => {
+      setWaitingForOpponent(true);
+      setNotification({
+        message: "Waiting for opponent to finish placing ships...",
+        type: "info",
+      });
+    });
+
+    socket.on("game_reset", () => {
+      setGamePhase("placing");
+      setPlacementConfirmed(false);
+      setWaitingForOpponent(false);
+      // Reset boards and other game state
+      setBoard(createEmptyBoard());
+      setEnemyBoard(createEmptyBoard());
+      setPlacedShips([]);
+      setAttackMarkers({});
+      setEnemyAttackMarkers({});
+      setAttackedShips({});
+      setEnemyShipsDestroyed([]);
+      setSelectedShip(null);
+      setPreviewPosition(null);
+      setWinner(null);
+    });
+
     return () => {
       socket.off("game_phase_update");
       socket.off("turn_update");
       socket.off("attack_result");
       socket.off("game_over");
       socket.off("both_maps_set");
+      socket.off("placement_confirmed");
+      socket.off("waiting_for_opponent");
+      socket.off("game_reset");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerRole, attackMarkers, enemyAttackMarkers]);
+  }, [playerRole, attackMarkers, enemyAttackMarkers, placementConfirmed]);
 
   const resetBoard = () => {
-    setBoard(createEmptyBoard());
-    setPlacedShips([]);
-    setSelectedShip(null);
-    setPreviewPosition(null);
+    // Only allow reset if placement hasn't been confirmed yet
+    if (!placementConfirmed) {
+      setBoard(createEmptyBoard());
+      setPlacedShips([]);
+      setSelectedShip(null);
+      setPreviewPosition(null);
+    } else {
+      setNotification({
+        message: "Cannot change ships after placement is confirmed!",
+        type: "error",
+      });
+    }
   };
 
   const handlePlaceShip = (row: number, col: number) => {
+    // Only allow placing ships if placement hasn't been confirmed yet
+    if (placementConfirmed) {
+      setNotification({
+        message: "Cannot change ships after placement is confirmed!",
+        type: "error",
+      });
+      return;
+    }
+
     if (
       !selectedShip ||
       !canPlaceShip(
@@ -231,6 +293,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const confirmPlacement = () => {
+    if (placementConfirmed) {
+      setNotification({
+        message: "You've already confirmed your ship placement!",
+        type: "warning",
+      });
+      return;
+    }
+
     if (placedShips.length === SHIP_TYPES.length) {
       socket.emit("finished_placing", {
         playerName,
@@ -240,11 +310,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
           positions: ship.positions,
         })),
       });
+    } else {
+      setNotification({
+        message: `Please place all ships before confirming (${placedShips.length}/${SHIP_TYPES.length})`,
+        type: "warning",
+      });
     }
   };
 
   const handleMouseEnter = (row: number, col: number) => {
-    if (gamePhase === "placing" && selectedShip) {
+    // Only show preview if placement hasn't been confirmed yet
+    if (gamePhase === "placing" && !placementConfirmed && selectedShip) {
       setPreviewPosition({ row, col });
     }
   };
@@ -254,6 +330,15 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const randomPlacement = () => {
+    // Only allow random placement if placement hasn't been confirmed yet
+    if (placementConfirmed) {
+      setNotification({
+        message: "Cannot change ships after placement is confirmed!",
+        type: "error",
+      });
+      return;
+    }
+
     const newBoard = createEmptyBoard();
     const newPlacedShips: PlacedShip[] = [];
 
@@ -339,19 +424,38 @@ const GameBoard: React.FC<GameBoardProps> = ({
     return (
       <div className="p-4 min-w-[800px]">
         <h2 className="text-xl font-bold mb-4">{playerName}&apos;s Board</h2>
-        <div className="flex items-center">
-          <Buttons
-            isPlacingShips={true}
-            remainingShips={remainingShips}
-            placedShips={placedShips}
-            selectedShip={selectedShip}
-            setSelectedShip={setSelectedShip}
-            shipOrientation={shipOrientation}
-            setShipOrientation={setShipOrientation}
-            resetBoard={resetBoard}
-            confirmPlacement={confirmPlacement}
+
+        {notification && (
+          <GameNotification
+            message={notification.message}
+            type={notification.type}
+            duration={3000}
           />
-        </div>
+        )}
+
+        {placementConfirmed && waitingForOpponent && (
+          <div className="p-4 bg-yellow-100 border border-yellow-400 rounded mb-4 text-black">
+            <h3 className="font-bold">Ships Placed Successfully!</h3>
+            <p>Waiting for opponent to finish placing their ships...</p>
+          </div>
+        )}
+
+        {!placementConfirmed && (
+          <div className="flex items-center">
+            <Buttons
+              isPlacingShips={true}
+              remainingShips={remainingShips}
+              placedShips={placedShips}
+              selectedShip={selectedShip}
+              setSelectedShip={setSelectedShip}
+              shipOrientation={shipOrientation}
+              setShipOrientation={setShipOrientation}
+              resetBoard={resetBoard}
+              confirmPlacement={confirmPlacement}
+            />
+          </div>
+        )}
+
         <div className="flex w-full items-center justify-center">
           <div className="inline-block border-2 border-gray-400 bg-blue-100 ">
             <div className="flex">
@@ -378,6 +482,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   let cellClasses = "w-8 h-8 border border-gray-400 ";
 
                   if (
+                    !placementConfirmed &&
                     selectedShip &&
                     isPreviewCell(
                       rowIndex,
@@ -403,6 +508,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   }
 
                   if (
+                    !placementConfirmed &&
                     selectedShip &&
                     canPlaceShip(
                       rowIndex,
@@ -430,17 +536,19 @@ const GameBoard: React.FC<GameBoardProps> = ({
             ))}
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <button
-            onClick={randomPlacement}
-            className=" px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors cursor-pointer"
-          >
-            Random Placement
-          </button>
-          <p>
-            Ships placed: {placedShips.length}/{SHIP_TYPES.length}
-          </p>
-        </div>
+        {!placementConfirmed && (
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={randomPlacement}
+              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors cursor-pointer"
+            >
+              Random Placement
+            </button>
+            <p>
+              Ships placed: {placedShips.length}/{SHIP_TYPES.length}
+            </p>
+          </div>
+        )}
       </div>
     );
   } else {
@@ -593,32 +701,19 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 </div>
               ))}
             </div>
-
-            <div className="mt-2 text-gray-700 text-sm">
-              {currentTurn === playerRole ? (
-                <div className="animate-pulse bg-green-50 p-2 border border-green-200 rounded">
-                  <p>
-                    Your Turn - Click on a cell in the enemy waters to attack
-                  </p>
-                  {Object.values(attackMarkers).filter((mark) => mark === "hit")
-                    .length > 0 && (
-                    <p className="text-green-600 font-medium mt-1">
-                      You&apos;re on a streak! Keep hitting to continue your
-                      turn.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-gray-50 p-2 border border-gray-200 rounded">
-                  <p>Waiting for opponent to attack...</p>
-                </div>
-              )}
-            </div>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <button
+            onClick={() => socket.emit("reset_game")}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors cursor-pointer"
+          >
+            Reset Game
+          </button>
         </div>
       </div>
     );
   }
 };
-
 export default GameBoard;
