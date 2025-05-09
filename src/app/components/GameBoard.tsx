@@ -59,9 +59,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     message: string;
     type: "info" | "success" | "error" | "warning";
   } | null>(null);
-  // Add a new state to track if the player has confirmed their ship placement
   const [placementConfirmed, setPlacementConfirmed] = useState<boolean>(false);
-  // Add a state to track if the player is waiting for the opponent
   const [waitingForOpponent, setWaitingForOpponent] = useState<boolean>(false);
 
   useEffect(() => {
@@ -191,6 +189,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     // Add listeners for the new events
     socket.on("placement_confirmed", (role) => {
+      console.log("Placement confirmed by server for", role);
       if (role === playerRole) {
         setPlacementConfirmed(true);
         setNotification({
@@ -224,6 +223,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       setSelectedShip(null);
       setPreviewPosition(null);
       setWinner(null);
+      console.log("Game reset received, all states cleared");
     });
 
     return () => {
@@ -293,6 +293,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const confirmPlacement = () => {
+    // If already confirmed, show notification and return
     if (placementConfirmed) {
       setNotification({
         message: "You've already confirmed your ship placement!",
@@ -301,7 +302,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
       return;
     }
 
+    // Check if all ships are placed
     if (placedShips.length === SHIP_TYPES.length) {
+      // Temporarily set local confirmation to prevent multiple clicks
+      setPlacementConfirmed(true);
+
       socket.emit("finished_placing", {
         playerName,
         playerRole,
@@ -702,15 +707,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
               ))}
             </div>
           </div>
-        </div>
-
-        <div className="mt-4">
-          <button
-            onClick={() => socket.emit("reset_game")}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors cursor-pointer"
-          >
-            Reset Game
-          </button>
         </div>
       </div>
     );

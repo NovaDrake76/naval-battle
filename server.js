@@ -116,45 +116,49 @@ app.prepare().then(() => {
 
     socket.on("finished_placing", (data) => {
       const player = players.get(socket.id);
-      if (player) {
-        const playerRole = player.role; //player1 or player2
+      if (!player) {
+        socket.emit("game_error", "Player not found");
+        return;
+      }
 
-        //mark this player as having placed their ships
-        if (playerRole === "player1") {
-          if (gameState.player1Map === null) {
-            gameState.player1Map = data;
-            io.emit("player1_map_set", true);
+      const playerRole = player.role; // player1 or player2
+      console.log(`Player ${playerRole} finished placing ships`);
 
-            socket.emit("placement_confirmed", playerRole);
+      //mark this player as having placed their ships
+      if (playerRole === "player1") {
+        if (gameState.player1Map === null) {
+          gameState.player1Map = data;
 
-            console.log("Player 1 has placed their ships");
-          } else {
-            socket.emit("game_error", "You've already placed your ships");
-            return;
-          }
-        } else if (playerRole === "player2") {
-          if (gameState.player2Map === null) {
-            gameState.player2Map = data;
-            io.emit("player2_map_set", true);
+          io.emit("player1_map_set", true);
 
-            socket.emit("placement_confirmed", playerRole);
-
-            console.log("Player 2 has placed their ships");
-          } else {
-            socket.emit("game_error", "You've already placed your ships");
-            return;
-          }
-        }
-
-        if (gameState.player1Map && gameState.player2Map) {
-          gameState.gamePhase = "attacking";
-          io.emit("both_maps_set");
-          io.emit("game_phase_update", "attacking");
-          io.emit("turn_update", gameState.currentTurn);
-          console.log("Both players have placed ships. Game phase: attacking");
+          socket.emit("placement_confirmed", playerRole);
+          console.log("Player 1 has placed their ships");
         } else {
-          socket.emit("waiting_for_opponent");
+          socket.emit("game_error", "You've already placed your ships");
+          return;
         }
+      } else if (playerRole === "player2") {
+        if (gameState.player2Map === null) {
+          gameState.player2Map = data;
+
+          io.emit("player2_map_set", true);
+
+          socket.emit("placement_confirmed", playerRole);
+          console.log("Player 2 has placed their ships");
+        } else {
+          socket.emit("game_error", "You've already placed your ships");
+          return;
+        }
+      }
+
+      if (gameState.player1Map && gameState.player2Map) {
+        gameState.gamePhase = "attacking";
+        io.emit("both_maps_set");
+        io.emit("game_phase_update", "attacking");
+        io.emit("turn_update", gameState.currentTurn);
+        console.log("Both players have placed ships. Game phase: attacking");
+      } else {
+        socket.emit("waiting_for_opponent");
       }
     });
 
