@@ -293,7 +293,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const confirmPlacement = () => {
-    // If already confirmed, show notification and return
     if (placementConfirmed) {
       setNotification({
         message: "You've already confirmed your ship placement!",
@@ -302,9 +301,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       return;
     }
 
-    // Check if all ships are placed
     if (placedShips.length === SHIP_TYPES.length) {
-      // Temporarily set local confirmation to prevent multiple clicks
       setPlacementConfirmed(true);
 
       socket.emit("finished_placing", {
